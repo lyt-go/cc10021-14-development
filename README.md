@@ -61,6 +61,10 @@ npm run dev
 | 质量评分卡 | `dq_scorecard` | 评分记录 | 记录编号、目标表名、完整性得分 |
 | 数据分类标签 | `tag_classify` | 分类标签 | 标签编号、标签名称、分类维度 |
 | 规则模板库 | `dq_template` | 规则模板 | 模板编号、模板名称、规则类型 |
+| 模板参数覆盖 | `dq_param_override` | 参数覆盖 | 覆盖编号、模板族、模板版本、业务域、覆盖参数 |
+| 目标表归属 | `dq_table_ownership` | 表归属 | 归属编号、目标表名、业务域、绑定字段 |
+| 编译会话 | `dq_compile_session` | 编译会话 | 会话编号、编译批次、编译来源、状态 |
+| 派生规则复核 | `dq_derived_rule` | 派生规则 | 派生编号、目标表名、模板版本、覆盖版本、编译来源 |
 | 异常模式识别 | `anomaly_pattern` | 异常模式 | 模式编号、模式名称、检测方法 |
 | 质量报告生成 | `dq_report` | 质量报告 | 报告编号、报告周期、覆盖表数 |
 | 元数据变更对比 | `metadata_diff` | 变更记录 | 变更编号、变更对象、变更类型 |
@@ -76,6 +80,17 @@ npm run dev
   `frontend/src/domain/<模块>.ts`，用于承载真实业务差异并维持36题位容量。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+
+### 派生规则治理（模板参数归属与版本）
+
+`backend/app/services/derived_rule.py` 在模板实例化之上补全参数生产来源与版本治理：
+
+- **参数校验**：`POST /api/dq_derived_rule/validate-params` 按模板 `参数规格` 校验必填、类型（identifier/number）与 SQL 占位符一致性；规则参数禁止经绑定通道传入。
+- **三种生产来源**：`本域绑定`（table/column 等标识参数）、`本域覆盖`（`dq_param_override`，带覆盖版本）、`继承共用默认`（带模板版本），每个参数逐项标注并随派生规则留存可回查。
+- **越权防护**：`dq_table_ownership` 登记的表只能由归属域绑定，共享模板组直接改归属表、跨域绑定、未登记字段一律拦截（HTTP 403）。
+- **中断/恢复**：`interrupt=true` 编译停在参数解析后、SQL 渲染前，会话固化 `编译来源`；`POST /api/dq_compile_session/{id}/resume` 恢复时重算来源并校验与固化值一致。
+- **复核与权限范围**：编译结果回写 `dq_derived_rule`（待复核），并在 `dq_rule_def` 登记实际绑定表/字段与版本；`GET /api/dq_derived_rule/scope/list?team=` 让共享模板组只看继承口径、本域团队只看本域归属，复核动作同样按范围鉴权。
+- **共用字段调整对比**：`POST /api/dq_template/shared-change/recompile` 仅共享模板组可调共用默认值并发布新版本；对各域最新派生规则重编译，逐口径返回调整前后的可运行 SQL、派生版本与 SQL 是否变化（本域覆盖口径 SQL 不变但版本仍升级待复核）。
 
 领域：数据工程
 子方向：数仓与数据湖

@@ -13,6 +13,12 @@ from app.services.metric_monitor import MetricMonitorService
 from app.services.dq_scorecard import DqScorecardService
 from app.services.tag_classify import TagClassifyService
 from app.services.dq_template import DqTemplateService
+from app.services.derived_rule import (
+    DqParamOverrideService,
+    DqTableOwnershipService,
+    DqCompileSessionService,
+    DqDerivedRuleService,
+)
 from app.services.anomaly_pattern import AnomalyPatternService
 from app.services.dq_report import DqReportService
 from app.services.metadata_diff import MetadataDiffService
@@ -33,6 +39,10 @@ SERVICES: dict[str, BaseModuleService] = {
     "dq_scorecard": DqScorecardService(),
     "tag_classify": TagClassifyService(),
     "dq_template": DqTemplateService(),
+    "dq_param_override": DqParamOverrideService(),
+    "dq_table_ownership": DqTableOwnershipService(),
+    "dq_compile_session": DqCompileSessionService(),
+    "dq_derived_rule": DqDerivedRuleService(),
     "anomaly_pattern": AnomalyPatternService(),
     "dq_report": DqReportService(),
     "metadata_diff": MetadataDiffService(),
